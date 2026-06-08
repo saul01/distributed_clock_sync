@@ -10,7 +10,7 @@ static constexpr uint16_t LEFT_PORT  = 9001;
 static constexpr uint16_t RIGHT_PORT = 9002;
 
 int main() {
-    sim_clock  clock(20.0f, 5000);
+    sim_clock  clock(0.0f, 0);
     udp_socket sock(RIGHT_PORT);
 
     std::puts("hello right");

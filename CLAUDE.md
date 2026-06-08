@@ -58,5 +58,9 @@ ppm = +20
 # Program Management
 1. Set Bazel workspace to compile `left` and `right` with simple `main()` function that prints `hello left` and `hello right`.
 2. Set gihub repo
+3. Add UDP 
 
 # Completed
+1. git repo
+2. Bazel project
+3. left and right processes
