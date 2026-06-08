@@ -51,7 +51,12 @@ Right:
 offset = 5000 us
 ppm = +20
 ```
+# Rules
+1. Source files end with .cpp, .c, .h, .py
+2. use sneak case
 
 # Program Management
 1. Set Bazel workspace to compile `left` and `right` with simple `main()` function that prints `hello left` and `hello right`.
 2. Set gihub repo
+
+# Completed

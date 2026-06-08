@@ -1,3 +1,4 @@
+#include "common/clock.h"
 #include <cstdio>
 
 int main() {
