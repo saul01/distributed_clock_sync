@@ -1,4 +1,4 @@
-  /*
+/*
 # build both
   bazel build //left:left //right:right
 
@@ -6,19 +6,38 @@
   bazel run //right:right
 */
 #include "common/clock.h"
-#include <cstdio>
+#include "common/msg.h"
+#include "common/udp_socket.h"
+
+#include <chrono>
 #include <iostream>
 #include <thread>
 
+static constexpr uint16_t LEFT_PORT  = 9001;
+static constexpr uint16_t RIGHT_PORT = 9002;
+
 int main() {
-    sim_clock clock(0.0f, 0);
-    puts("hello left");
+    sim_clock    clock(0.0f, 0);
+    udp_socket   sock(LEFT_PORT);
+
+    std::puts("hello left");
+
+    std::thread rx([&] {
+        ts_msg msg{};
+        while (true) {
+            if (sock.recv(&msg, sizeof(msg), 2000) == sizeof(msg))
+                std::cout << "[left]  rx from right: " << msg.ts_us << " us\n";
+        }
+    });
 
     while (true) {
-        std::cout << clock.now_us() << '\n';
-        std::this_thread::sleep_for(
-        std::chrono::seconds(1));
+        ts_msg msg{};
+        msg.node_id = 0;
+        msg.ts_us   = clock.now_us();
+        sock.send_to("127.0.0.1", RIGHT_PORT, &msg, sizeof(msg));
+        std::cout << "[left]  tx: " << msg.ts_us << " us\n";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    return 0;
+    rx.join();
 }

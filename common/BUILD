@@ -6,3 +6,10 @@ cc_library(
     hdrs = ["clock.h"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "udp_socket",
+    srcs = ["udp_socket.cpp"],
+    hdrs = ["udp_socket.h", "msg.h"],
+    visibility = ["//visibility:public"],
+)
