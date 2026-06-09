@@ -7,7 +7,8 @@ enum class msg_type_t : uint8_t
 {
     START     = 1,
     SYNC_REQ  = 2,
-    SYNC_RESP = 3
+    SYNC_RESP = 3,
+    SYNC_ADJ  = 4   // left→right: t1_us carries offset estimate (us); right applies PI
 };
 
 struct sync_message

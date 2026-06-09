@@ -4,7 +4,7 @@ static constexpr uint16_t LEFT_PORT  = 9001;
 static constexpr uint16_t RIGHT_PORT = 9002;
 
 int main() {
-    audio_node right_node(RIGHT_PORT, LEFT_PORT);
+    audio_node right_node(RIGHT_PORT, LEFT_PORT, /*ppm=*/20.0f, /*offset_us=*/5000);
     right_node.wait_for_start();
 
     while (right_node.is_running()) {
