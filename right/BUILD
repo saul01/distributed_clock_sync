@@ -4,7 +4,6 @@ cc_binary(
     name = "right",
     srcs = ["main.cpp"],
     deps = [
-        "//common:common",
-        "//common:udp_socket",
+        "//common:audio_node",
     ],
 )

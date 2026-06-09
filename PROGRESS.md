@@ -11,32 +11,40 @@ clock synchronization, and PLL/FLL control loops.
 
 ### Bazel workspace
 - `MODULE.bazel` + `rules_cc` configured.
-- `bazel build //left:left //right:right` and `bazel run` work cleanly.
+- `.bazelrc` sets `--cxxopt=-std=c++17`.
+- `bazel build //left:left //right:right` builds cleanly.
 
-### Simulated clock (`common/clock.h`, `common/clock.cpp`)
+### Simulated clock (`common/clock/clock.h`, `common/clock/clock.cpp`)
 - `sim_clock(float ppm_error, int64_t offset_us)` models a hardware oscillator
   with a configurable frequency error (ppm) and initial offset.
-- `now_us()` returns a monotonic timestamp in microseconds, scaled by the ppm drift.
-- left: `ppm=0, offset=0` (reference clock).
-- right: `ppm=+20, offset=5000 µs` (drifting clock).
+- `now_us()` returns a monotonic timestamp in microseconds, scaled by ppm drift.
+- Both nodes currently start at `ppm=0, offset=0`; parameters are easy to change.
 
-### UDP transport (`common/udp_socket.h`, `common/udp_socket.cpp`, `common/msg.h`)
-- `udp_socket` wraps a POSIX SOCK_DGRAM socket with `send_to` / `recv`.
-- `ts_msg` carries `node_id` + `ts_us` between peers.
-- left binds port 9001, right binds port 9002, both on localhost.
-- Each process spawns a receive thread and sends its timestamp every second.
-- Confirmed: timestamps cross the wire and drift is visible
-  (right's timestamps consistently ~5000 µs ahead of left's plus growing ppm offset).
+### Comms layer (`common/comms/`)
+- `i_comms` — abstract interface: `send(sync_message)`, `receive(timeout_ms) → optional<sync_message>`.
+- `udp_comms(bind_port, peer_port)` — POSIX UDP socket; always sends to `127.0.0.1:peer_port`.
+- `sync_message` — POD struct: `msg_type_t type`, `seq`, `t1_us`, `t2_us`, `t3_us`.
+- `msg_type_t`: `START=1`, `SYNC_REQ=2`, `SYNC_RESP=3`.
+
+### audio_node (`common/audio_node/`)
+- Owns `udp_comms`, `sim_clock`, and a background rx thread.
+- `start()` — sends `START` to peer, spawns rx loop thread.
+- `wait_for_start()` — blocks until `START` is received, then spawns rx loop thread.
+- `is_running()` — returns whether rx thread is live.
+- START handshake confirmed working end-to-end.
+
+### Processes
+- `left/main.cpp` — `audio_node(9001, 9002)` → `start()`
+- `right/main.cpp` — `audio_node(9002, 9001)` → `wait_for_start()`
 
 ---
 
 ## Next Steps
 
-- **Clock-offset estimation** — on each received timestamp, compute the one-way
-  delay and offset between the two clocks (NTP-style or PTP).
-- **PLL/FLL control loop** — feed the offset estimate into a proportional-integral
-  controller that steers `ppm_error` and `offset_us` on the follower to converge
-  toward the reference.
-- **Convergence logging** — plot offset error over time to show the loop locking.
-- **Multi-machine** — replace localhost with real network addresses to run left and
-  right on separate machines or VMs.
+1. **SYNC_REQ/SYNC_RESP exchange** — left periodically sends `SYNC_REQ` with `t1=clock.now_us()`;
+   right records `t2`, replies with `SYNC_RESP` carrying `t1, t2, t3`.
+2. **Offset estimation** — left computes `offset = ((t2-t1) + (t3-t4)) / 2` (NTP 4-timestamp formula).
+3. **PI control loop** — feed offset into a proportional-integral controller that steers
+   right's `ppm_error` and `offset_us` toward zero over time.
+4. **Convergence logging** — log offset error per sync round to show the loop locking in.
+5. **Multi-machine** — replace `127.0.0.1` with configurable peer address for cross-machine testing.
