@@ -36,4 +36,5 @@ private:
     std::atomic<uint64_t> seq_{0};
     role_t                role_{role_t::UNKNOWN};
     double                pi_integral_{0.0};
+    int64_t               last_offset_us_{0};
 };

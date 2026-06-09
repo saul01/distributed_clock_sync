@@ -76,8 +76,23 @@ void audio_node::run_sync_loop()
 
 void audio_node::run_rx_loop()
 {
+    const char* tag = (role_ == role_t::LEFT) ? "left" : "right";
+    auto last_hb    = std::chrono::steady_clock::now();
+
     while (running_) {
         auto msg = comms_.receive(500);
+
+        auto now = std::chrono::steady_clock::now();
+        if (now - last_hb >= std::chrono::seconds(1)) {
+            last_hb = now;
+            if (role_ == role_t::LEFT) {
+                std::cout << "[left]  sync error = " << last_offset_us_ << " us" << std::endl;
+            } else {
+                std::cout << "[right] sync error = " << last_offset_us_ << " us"
+                          << "  ppm = " << clock_.ppm_error << std::endl;
+            }
+        }
+
         if (!msg) continue;
 
         switch (msg->type) {
@@ -110,10 +125,8 @@ void audio_node::handle_sync_resp(const sync_message& resp)
 {
     int64_t t4     = clock_.now_us();
     double  offset = 0.5 * ((resp.t2_us - resp.t1_us) + (resp.t3_us - t4));
+    last_offset_us_ = static_cast<int64_t>(offset);
 
-    std::cout << "[left]  seq=" << resp.seq
-              << "  offset=" << static_cast<int64_t>(offset) << " us"
-              << std::endl;
 
     sync_message adj{};
     adj.type  = msg_type_t::SYNC_ADJ;
@@ -126,14 +139,8 @@ void audio_node::handle_sync_resp(const sync_message& resp)
 
 void audio_node::handle_sync_adj(const sync_message& adj)
 {
-    double offset = static_cast<double>(adj.t1_us);
-    apply_pi(offset);
-
-    std::cout << "[right] seq=" << adj.seq
-              << "  adj=" << adj.t1_us << " us"
-              << "  ppm=" << clock_.ppm_error
-              << "  off=" << clock_.offset_us << " us"
-              << std::endl;
+    last_offset_us_ = adj.t1_us;
+    apply_pi(static_cast<double>(adj.t1_us));
 }
 
 void audio_node::apply_pi(double offset_us)
